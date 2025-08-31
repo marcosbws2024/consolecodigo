@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel de Códigos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+
+    .card-custom {
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .btn-copy {
+      transition: transform 0.2s;
+    }
+
+    .btn-copy:hover {
+      transform: scale(1.05);
+    }
+
+    h3 {
+      margin-bottom: 20px;
+    }
+
+    p {
+      margin-bottom: 20px;
+    }
+
+    .btn-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    #explicacaoCodigo{
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body class="p-4">
+
+    <div class="container">
+
+    <!-- Painel de cópia -->
+    <div class="card card-custom p-4">
+      <h3 class="text-center">💻 Painel de Códigos de Extração</h3>
+      <p class="text-center">Clique em um dos botões abaixo para copiar o código correspondente para a área de transferência.</p>
+
+      <div class="btn-container">
+        <button class="btn btn-success btn-lg btn-copy" onclick="copiarCodigo('xlsx')">📥 Extrair Tabela XLSX</button>
+        <button class="btn btn-primary btn-lg btn-copy" onclick="copiarCodigo('antena')">📡 Coordenada Antena</button>
+      </div>
+    </div>
+
+<!-- Tutorial explicativo -->
+<div class="card card-custom p-4" id="explicacaoCodigo">
+  <h3 class="text-center">📚 Tutorial: Como rodar código no Console do Navegador</h3>
+  <p class="text-center">
+    O <b>Console</b> é uma parte "escondida" do navegador que serve para testar e executar códigos.  
+    Siga o passo a passo abaixo:
+  </p>
+
+  <!-- Imagem ilustrativa -->
+  <div class="text-center mb-3">
+    <img src="console.png" 
+         alt="Exemplo Console do Chrome" 
+         class="img-fluid rounded shadow">
+    <p class="text-muted mt-2"><small>Exemplo: Console aberto no Google Chrome</small></p>
+  </div>
+
+  <ol class="list-group list-group-numbered">
+    <li class="list-group-item">
+      Abra o site onde você quer rodar o código (exemplo: a página com a tabela que deseja extrair).
+    </li>
+    <li class="list-group-item">
+      Abra as ferramentas de desenvolvedor:
+      <ul>
+        <li><kbd>F12</kbd> → funciona na maioria dos navegadores.</li>
+        <li><kbd>Ctrl + Shift + I</kbd> (Windows/Linux) ou <kbd>Cmd + Option + I</kbd> (Mac).</li>
+        <li>Ou clique com o botão direito em qualquer lugar da página e escolha <b>“Inspecionar”</b>.</li>
+      </ul>
+    </li>
+    <li class="list-group-item">
+      Vai aparecer uma janela lateral ou inferior. Clique na aba <b>Console</b> (geralmente ao lado de “Elements” ou “Rede”).
+    </li>
+    <li class="list-group-item">
+      Cole o código que você copiou deste painel:  
+      <ul>
+        <li><kbd>Ctrl + V</kbd> (Windows/Linux)</li>
+        <li><kbd>Cmd + V</kbd> (Mac)</li>
+      </ul>
+    </li>
+    <li class="list-group-item">
+      Pressione <kbd>Enter</kbd> para rodar o código.  
+      Se for um código grande, primeiro cole tudo e só depois pressione <kbd>Enter</kbd>.
+    </li>
+  </ol>
+
+  <div class="alert alert-info mt-3">
+    💡 <b>Dica:</b> Se você quiser pular de linha dentro do console sem rodar o código ainda, use  
+    <kbd>Shift + Enter</kbd>.
+  </div>
+  <div class="alert alert-warning mt-3">
+    ⚠️ <b>Atenção:</b> O código só funciona na aba onde você colou.  
+    Se atualizar a página, precisa colar de novo.
+  </div>
+</div>
+
+
+   
+  </div>
+
+  <!-- Códigos ocultos -->
+  <textarea id="codigoXLSX" style="position:absolute; left:-9999px; top:-9999px;">
+ (async function() {
+    // Carregar SheetJS dinamicamente
+    if (!window.XLSX) {
+        let script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+    }
+
+    let btn = document.createElement('button');
+    btn.innerText = '📥 BAIXAR XLSX';
+    Object.assign(btn.style, {position:'fixed',top:'20px',right:'20px',padding:'10px 20px',background:'#007bff',color:'white',border:'none',borderRadius:'8px',cursor:'pointer',boxShadow:'0 0 10px rgba(0,0,0,0.3)',zIndex:9999});
+    document.body.appendChild(btn);
+
+    btn.onclick = async function() {
+        btn.disabled = true;
+        btn.innerText = '🔄 Baixando...';
+
+        let todasLinhas = [];
+        let urlAtual = window.location.href;
+        let cabecalhoArray = null;
+        let pagina = 1;
+
+        function extrairTextoCelula(cell) {
+            return cell.textContent.replace(/[\r\n]+/g, ' ').trim();
+        }
+
+        function extrairTabelaDoHTML(htmlString, capturarCabecalho) {
+            let parser = new DOMParser();
+            let doc = parser.parseFromString(htmlString, 'text/html');
+            let tabela = doc.querySelector('table');
+            if (!tabela) return null;
+
+            let linhas = [];
+            let tbody = tabela.querySelector('tbody') || tabela;
+
+            if (capturarCabecalho && !cabecalhoArray) {
+                let headers = [];
+                let thead = tabela.querySelector('thead');
+                if (thead && thead.rows.length > 0) {
+                    for (let th of thead.rows[0].cells) {
+                        headers.push(extrairTextoCelula(th));
+                    }
+                } else if (tbody.rows.length > 0) {
+                    for (let cell of tbody.rows[0].cells) {
+                        headers.push(extrairTextoCelula(cell));
+                    }
+                }
+                cabecalhoArray = headers;
+            }
+
+            let startRow = (capturarCabecalho && !tabela.querySelector('thead')) ? 1 : 0;
+            for (let i = startRow; i < tbody.rows.length; i++) {
+                let row = tbody.rows[i];
+                let rowData = [];
+                for (let cell of row.cells) {
+                    rowData.push(extrairTextoCelula(cell));
+                }
+                if(rowData.join('').trim() !== '') linhas.push(rowData);
+            }
+
+            return { linhas, doc };
+        }
+
+        function encontrarLinkProxima(doc) {
+            let botoes = Array.from(doc.querySelectorAll('a.btn, a.pointer.btn')).filter(el => {
+                let icone = el.querySelector('i.fa');
+                if (icone) {
+                    let classes = icone.className.toLowerCase();
+                    if (
+                        classes.includes('fa-angle-double-right') ||
+                        classes.includes('fa-angle-right') ||
+                        classes.includes('fa-chevron-right') ||
+                        classes.includes('fa-caret-right') ||
+                        classes.includes('fa-arrow-right')
+                    ) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            if (botoes.length > 0) return botoes[0].href;
+
+            let candidatos = Array.from(doc.querySelectorAll('a'))
+                .filter(el => ['>', '»'].includes(el.textContent.trim()) && !el.classList.contains('disabled'));
+            if (candidatos.length > 0) return candidatos[0].href;
+
+            return null;
+        }
+
+        try {
+            while (urlAtual) {
+                console.log(`📄 Página ${pagina}: ${urlAtual}`);
+                let res = await fetch(urlAtual, { credentials: 'include' });
+                if (!res.ok) {
+                    console.error('Erro ao buscar:', urlAtual, res.status);
+                    break;
+                }
+                let html = await res.text();
+                let result = extrairTabelaDoHTML(html, pagina === 1);
+                if (!result) {
+                    console.warn('Tabela não encontrada:', urlAtual);
+                    break;
+                }
+                let { linhas, doc } = result;
+
+                console.log(`✔️ Capturadas ${linhas.length} linhas da página ${pagina}`);
+                todasLinhas.push(...linhas);
+
+                let proximaURL = encontrarLinkProxima(doc);
+                if (proximaURL && proximaURL !== urlAtual) {
+                    urlAtual = proximaURL;
+                    pagina++;
+                    await new Promise(r => setTimeout(r, 500));
+                } else {
+                    console.log('✅ Fim das páginas.');
+                    urlAtual = null;
+                }
+            }
+
+            if (!cabecalhoArray || todasLinhas.length === 0) {
+                alert('⚠️ Falhou em capturar dados.');
+                btn.innerText = '❌ Falhou';
+                btn.disabled = false;
+                return;
+            }
+
+            let planilhaDados = [cabecalhoArray, ...todasLinhas];
+            let wb = XLSX.utils.book_new();
+            let ws = XLSX.utils.aoa_to_sheet(planilhaDados);
+            XLSX.utils.book_append_sheet(wb, ws, "Tabela");
+            XLSX.writeFile(wb, 'tabela_completa.xlsx');
+
+            console.log(`✅ Download XLSX concluído com ${todasLinhas.length} registros.`);
+            btn.innerText = '✅ Download XLSX';
+        } catch (e) {
+            console.error(e);
+            alert('❌ Erro durante o download');
+            btn.innerText = '❌ Erro';
+            btn.disabled = false;
+        }
+    };
+})();
+    
+  </textarea>
+
+  <textarea id="codigoAntena" style="position:absolute; left:-9999px; top:-9999px;">
+(async () => {
+  const linhas = document.querySelectorAll('table tbody tr');
+  const resultados = [];
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i];
+
+    const botaoDetalhes = linha.querySelector('[data-original-title="Detalhes da Antena"]');
+    if (!botaoDetalhes) {
+      console.warn(`Linha ${i + 1}: botão "Detalhes da Antena" não encontrado.`);
+      continue;
+    }
+
+    botaoDetalhes.click();
+
+    // Espera a modal abrir (máx 5s) e evita travamento
+    await new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        console.warn(`Linha ${i + 1}: Timeout esperando modal abrir`);
+        resolve(); // Continua mesmo se não abrir
+      }, 5000);
+
+      const observer = new MutationObserver((_, obs) => {
+        const modalBody = document.querySelector('#ajaxmodal .modal-body');
+        if (modalBody && modalBody.innerText.trim().length > 0) {
+          clearTimeout(timeout);
+          obs.disconnect();
+          resolve();
+        }
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+
+    const modalBody = document.querySelector('#ajaxmodal .modal-body');
+    if (!modalBody || modalBody.innerText.trim().length === 0) {
+      console.warn(`Linha ${i + 1}: modal não encontrada ou vazia.`);
+      continue;
+    }
+
+    const texto = modalBody.innerText;
+
+    // Extrai latitude e longitude com regex
+    const latitude = (texto.match(/Latitude:\s*([-\d\.]+)/i) || [null, null])[1];
+    const longitude = (texto.match(/Longitude:\s*([-\d\.]+)/i) || [null, null])[1];
+
+    if (!latitude || !longitude) {
+      console.warn(`Linha ${i + 1}: latitude ou longitude não encontrados.`);
+    } else {
+      const linkGoogleMaps = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      resultados.push({ linha: i + 1, latitude, longitude, linkGoogleMaps });
+      console.log(`Linha ${i + 1} - Latitude: ${latitude}, Longitude: ${longitude}`);
+      console.log(`Link Google Maps: ${linkGoogleMaps}`);
+    }
+
+    // Fecha a modal
+    const botaoFechar = document.querySelector('#ajaxmodal button.close');
+    if (botaoFechar) {
+      botaoFechar.click();
+      await new Promise(r => setTimeout(r, 1000));
+    } else {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+
+  console.log('Finalizado. Resultados:', resultados);
+})();
+
+  </textarea>
+
+
+  <!-- Códigos ocultos -->
+  <textarea id="codigoXLSX" style="position:absolute; left:-9999px; top:-9999px;">
+(async function() {
+    if (!window.XLSX) {
+        let script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+    }
+
+    let btn = document.createElement('button');
+    btn.innerText = '📥 BAIXAR XLSX';
+    Object.assign(btn.style, {position:'fixed',top:'20px',right:'20px',padding:'10px 20px',background:'#007bff',color:'white',border:'none',borderRadius:'8px',cursor:'pointer',boxShadow:'0 0 10px rgba(0,0,0,0.3)',zIndex:9999});
+    document.body.appendChild(btn);
+
+    btn.onclick = async function() {
+        btn.disabled = true;
+        btn.innerText = '🔄 Baixando...';
+
+        let todasLinhas = [];
+        let urlAtual = window.location.href;
+        let cabecalhoArray = null;
+        let pagina = 1;
+
+        function extrairTextoCelula(cell) {
+            return cell.textContent.replace(/[\r\n]+/g, ' ').trim();
+        }
+
+        function extrairTabelaDoHTML(htmlString, capturarCabecalho) {
+            let parser = new DOMParser();
+            let doc = parser.parseFromString(htmlString, 'text/html');
+            let tabela = doc.querySelector('table');
+            if (!tabela) return null;
+
+            let linhas = [];
+            let tbody = tabela.querySelector('tbody') || tabela;
+
+            if (capturarCabecalho && !cabecalhoArray) {
+                let headers = [];
+                let thead = tabela.querySelector('thead');
+                if (thead && thead.rows.length > 0) {
+                    for (let th of thead.rows[0].cells) {
+                        headers.push(extrairTextoCelula(th));
+                    }
+                } else if (tbody.rows.length > 0) {
+                    for (let cell of tbody.rows[0].cells) {
+                        headers.push(extrairTextoCelula(cell));
+                    }
+                }
+                cabecalhoArray = headers;
+            }
+
+            let startRow = (capturarCabecalho && !tabela.querySelector('thead')) ? 1 : 0;
+            for (let i = startRow; i < tbody.rows.length; i++) {
+                let row = tbody.rows[i];
+                let rowData = [];
+                for (let cell of row.cells) {
+                    rowData.push(extrairTextoCelula(cell));
+                }
+                if(rowData.join('').trim() !== '') linhas.push(rowData);
+            }
+
+            return { linhas, doc };
+        }
+
+        function encontrarLinkProxima(doc) {
+            let botoes = Array.from(doc.querySelectorAll('a.btn, a.pointer.btn')).filter(el => {
+                let icone = el.querySelector('i.fa');
+                if (icone) {
+                    let classes = icone.className.toLowerCase();
+                    if (
+                        classes.includes('fa-angle-double-right') ||
+                        classes.includes('fa-angle-right') ||
+                        classes.includes('fa-chevron-right') ||
+                        classes.includes('fa-caret-right') ||
+                        classes.includes('fa-arrow-right')
+                    ) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            if (botoes.length > 0) return botoes[0].href;
+
+            let candidatos = Array.from(doc.querySelectorAll('a'))
+                .filter(el => ['>', '»'].includes(el.textContent.trim()) && !el.classList.contains('disabled'));
+            if (candidatos.length > 0) return candidatos[0].href;
+
+            return null;
+        }
+
+        try {
+            while (urlAtual) {
+                console.log(`📄 Página ${pagina}: ${urlAtual}`);
+                let res = await fetch(urlAtual, { credentials: 'include' });
+                if (!res.ok) break;
+                let html = await res.text();
+                let result = extrairTabelaDoHTML(html, pagina === 1);
+                if (!result) break;
+
+                let { linhas, doc } = result;
+                todasLinhas.push(...linhas);
+
+                let proximaURL = encontrarLinkProxima(doc);
+                if (proximaURL && proximaURL !== urlAtual) {
+                    urlAtual = proximaURL;
+                    pagina++;
+                    await new Promise(r => setTimeout(r, 500));
+                } else {
+                    urlAtual = null;
+                }
+            }
+
+            if (!cabecalhoArray || todasLinhas.length === 0) return;
+
+            let planilhaDados = [cabecalhoArray, ...todasLinhas];
+            let wb = XLSX.utils.book_new();
+            let ws = XLSX.utils.aoa_to_sheet(planilhaDados);
+            XLSX.utils.book_append_sheet(wb, ws, "Tabela");
+            XLSX.writeFile(wb, 'tabela_completa.xlsx');
+        } catch (e) {
+            console.error(e);
+        }
+    };
+})();
+  </textarea>
+
+  <textarea id="codigoAntena" style="position:absolute; left:-9999px; top:-9999px;">
+(async () => {
+  const linhas = document.querySelectorAll('table tbody tr');
+  const resultados = [];
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i];
+
+    const botaoDetalhes = linha.querySelector('[data-original-title="Detalhes da Antena"]');
+    if (!botaoDetalhes) continue;
+
+    botaoDetalhes.click();
+
+    await new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve(), 5000);
+
+      const observer = new MutationObserver((_, obs) => {
+        const modalBody = document.querySelector('#ajaxmodal .modal-body');
+        if (modalBody && modalBody.innerText.trim().length > 0) {
+          clearTimeout(timeout);
+          obs.disconnect();
+          resolve();
+        }
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+
+    const modalBody = document.querySelector('#ajaxmodal .modal-body');
+    if (!modalBody || modalBody.innerText.trim().length === 0) continue;
+
+    const texto = modalBody.innerText;
+
+    const latitude = (texto.match(/Latitude:\s*([-\d\.]+)/i) || [null, null])[1];
+    const longitude = (texto.match(/Longitude:\s*([-\d\.]+)/i) || [null, null])[1];
+
+    if (latitude && longitude) {
+      const linkGoogleMaps = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      resultados.push({ linha: i + 1, latitude, longitude, linkGoogleMaps });
+      console.log(`Linha ${i + 1} - Latitude: ${latitude}, Longitude: ${longitude}`);
+      console.log(`Link Google Maps: ${linkGoogleMaps}`);
+    }
+
+    const botaoFechar = document.querySelector('#ajaxmodal button.close');
+    if (botaoFechar) {
+      botaoFechar.click();
+      await new Promise(r => setTimeout(r, 1000));
+    } else {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+
+  console.log('Finalizado. Resultados:', resultados);
+})();
+  </textarea>
+
+  <script>
+    function copiarCodigo(tipo) {
+      let codigo = '';
+      if (tipo === 'xlsx') codigo = document.getElementById('codigoXLSX').value;
+      else if (tipo === 'antena') codigo = document.getElementById('codigoAntena').value;
+
+      navigator.clipboard.writeText(codigo).then(() => {
+        alert("✅ Código copiado com sucesso!");
+      }).catch(err => {
+        alert("❌ Erro ao copiar: " + err);
+      });
+    }
+  </script>
+
+</body>
+</html>
