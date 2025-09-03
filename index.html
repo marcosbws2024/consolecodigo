@@ -53,6 +53,7 @@
 
       <div class="btn-container">
         <button class="btn btn-success btn-lg btn-copy" onclick="copiarCodigo('xlsx')">📥 Extrair Tabela XLSX</button>
+        <button class="btn btn-success btn-lg btn-copy" onclick="copiarCodigo('csv')">📥 Extrair Tabela CSV</button>
         <button class="btn btn-primary btn-lg btn-copy" onclick="copiarCodigo('antena')">📡 Coordenada Antena</button>
       </div>
     </div>
@@ -111,13 +112,12 @@
   </div>
 </div>
 
-
-   
   </div>
 
   <!-- Códigos ocultos -->
   <textarea id="codigoXLSX" style="position:absolute; left:-9999px; top:-9999px;">
- (async function() {
+
+(async function () {
     // Carregar SheetJS dinamicamente
     if (!window.XLSX) {
         let script = document.createElement('script');
@@ -126,12 +126,52 @@
         await new Promise(resolve => script.onload = resolve);
     }
 
+    // Criar container para os botões
+    let container = document.createElement('div');
+    Object.assign(container.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        display: 'flex',
+        gap: '10px',
+        zIndex: 9999
+    });
+
+    // Botão de download
     let btn = document.createElement('button');
     btn.innerText = '📥 BAIXAR XLSX';
-    Object.assign(btn.style, {position:'fixed',top:'20px',right:'20px',padding:'10px 20px',background:'#007bff',color:'white',border:'none',borderRadius:'8px',cursor:'pointer',boxShadow:'0 0 10px rgba(0,0,0,0.3)',zIndex:9999});
-    document.body.appendChild(btn);
+    Object.assign(btn.style, {
+        padding: '10px 20px',
+        background: '#007bff',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        boxShadow: '0 0 10px rgba(0,0,0,0.3)'
+    });
 
-    btn.onclick = async function() {
+    // Botão de fechar
+    let closeBtn = document.createElement('button');
+    closeBtn.innerText = '❌';
+    Object.assign(closeBtn.style, {
+        padding: '10px',
+        background: '#dc3545',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        boxShadow: '0 0 10px rgba(0,0,0,0.3)'
+    });
+    closeBtn.title = 'Fechar';
+    closeBtn.onclick = () => container.remove();
+
+    // Adicionar botões ao container
+    container.appendChild(btn);
+    container.appendChild(closeBtn);
+    document.body.appendChild(container);
+
+    // Ação do botão de download
+    btn.onclick = async function () {
         btn.disabled = true;
         btn.innerText = '🔄 Baixando...';
 
@@ -175,7 +215,7 @@
                 for (let cell of row.cells) {
                     rowData.push(extrairTextoCelula(cell));
                 }
-                if(rowData.join('').trim() !== '') linhas.push(rowData);
+                if (rowData.join('').trim() !== '') linhas.push(rowData);
             }
 
             return { linhas, doc };
@@ -260,6 +300,7 @@
         }
     };
 })();
+
     
   </textarea>
 
@@ -518,18 +559,224 @@
 })();
   </textarea>
 
-  <script>
-    function copiarCodigo(tipo) {
-      let codigo = '';
-      if (tipo === 'xlsx') codigo = document.getElementById('codigoXLSX').value;
-      else if (tipo === 'antena') codigo = document.getElementById('codigoAntena').value;
 
-      navigator.clipboard.writeText(codigo).then(() => {
-        alert("✅ Código copiado com sucesso!");
-      }).catch(err => {
-        alert("❌ Erro ao copiar: " + err);
-      });
+    <textarea id="codigoCsv" style="position:absolute; left:-9999px; top:-9999px;">
+(async function () {
+    // Carregar SheetJS dinamicamente
+    if (!window.XLSX) {
+        let script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
     }
+
+    // Função para remover acentos
+    function removerAcentos(str) {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    // Criar container para os botões
+    let container = document.createElement('div');
+    Object.assign(container.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        display: 'flex',
+        gap: '10px',
+        zIndex: 9999
+    });
+
+    // Botão de download
+    let btn = document.createElement('button');
+    btn.innerText = '📥 BAIXAR CSV';
+    Object.assign(btn.style, {
+        padding: '10px 20px',
+        background: '#28a745',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        boxShadow: '0 0 10px rgba(0,0,0,0.3)'
+    });
+
+    // Botão de fechar
+    let closeBtn = document.createElement('button');
+    closeBtn.innerText = '❌';
+    Object.assign(closeBtn.style, {
+        padding: '10px',
+        background: '#dc3545',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        boxShadow: '0 0 10px rgba(0,0,0,0.3)'
+    });
+    closeBtn.title = 'Fechar';
+    closeBtn.onclick = () => container.remove();
+
+    // Adicionar botões ao container
+    container.appendChild(btn);
+    container.appendChild(closeBtn);
+    document.body.appendChild(container);
+
+    // Ação do botão de download
+    btn.onclick = async function () {
+        btn.disabled = true;
+        btn.innerText = '🔄 Baixando...';
+
+        let todasLinhas = [];
+        let urlAtual = window.location.href;
+        let cabecalhoArray = null;
+        let pagina = 1;
+
+        function extrairTextoCelula(cell) {
+            return removerAcentos(cell.textContent.replace(/[\r\n]+/g, ' ').trim());
+        }
+
+        function extrairTabelaDoHTML(htmlString, capturarCabecalho) {
+            let parser = new DOMParser();
+            let doc = parser.parseFromString(htmlString, 'text/html');
+            let tabela = doc.querySelector('table');
+            if (!tabela) return null;
+
+            let linhas = [];
+            let tbody = tabela.querySelector('tbody') || tabela;
+
+            if (capturarCabecalho && !cabecalhoArray) {
+                let headers = [];
+                let thead = tabela.querySelector('thead');
+                if (thead && thead.rows.length > 0) {
+                    for (let th of thead.rows[0].cells) {
+                        headers.push(extrairTextoCelula(th));
+                    }
+                } else if (tbody.rows.length > 0) {
+                    for (let cell of tbody.rows[0].cells) {
+                        headers.push(extrairTextoCelula(cell));
+                    }
+                }
+                cabecalhoArray = headers;
+            }
+
+            let startRow = (capturarCabecalho && !tabela.querySelector('thead')) ? 1 : 0;
+            for (let i = startRow; i < tbody.rows.length; i++) {
+                let row = tbody.rows[i];
+                let rowData = [];
+                for (let cell of row.cells) {
+                    rowData.push(extrairTextoCelula(cell));
+                }
+                if (rowData.join('').trim() !== '') linhas.push(rowData);
+            }
+
+            return { linhas, doc };
+        }
+
+        function encontrarLinkProxima(doc) {
+            let botoes = Array.from(doc.querySelectorAll('a.btn, a.pointer.btn')).filter(el => {
+                let icone = el.querySelector('i.fa');
+                if (icone) {
+                    let classes = icone.className.toLowerCase();
+                    if (
+                        classes.includes('fa-angle-double-right') ||
+                        classes.includes('fa-angle-right') ||
+                        classes.includes('fa-chevron-right') ||
+                        classes.includes('fa-caret-right') ||
+                        classes.includes('fa-arrow-right')
+                    ) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            if (botoes.length > 0) return botoes[0].href;
+
+            let candidatos = Array.from(doc.querySelectorAll('a'))
+                .filter(el => ['>', '»'].includes(el.textContent.trim()) && !el.classList.contains('disabled'));
+            if (candidatos.length > 0) return candidatos[0].href;
+
+            return null;
+        }
+
+        try {
+            while (urlAtual) {
+                console.log(`📄 Página ${pagina}: ${urlAtual}`);
+                let res = await fetch(urlAtual, { credentials: 'include' });
+                if (!res.ok) {
+                    console.error('Erro ao buscar:', urlAtual, res.status);
+                    break;
+                }
+                let html = await res.text();
+                let result = extrairTabelaDoHTML(html, pagina === 1);
+                if (!result) {
+                    console.warn('Tabela não encontrada:', urlAtual);
+                    break;
+                }
+                let { linhas, doc } = result;
+
+                console.log(`✔️ Capturadas ${linhas.length} linhas da página ${pagina}`);
+                todasLinhas.push(...linhas);
+
+                let proximaURL = encontrarLinkProxima(doc);
+                if (proximaURL && proximaURL !== urlAtual) {
+                    urlAtual = proximaURL;
+                    pagina++;
+                    await new Promise(r => setTimeout(r, 500));
+                } else {
+                    console.log('✅ Fim das páginas.');
+                    urlAtual = null;
+                }
+            }
+
+            if (!cabecalhoArray || todasLinhas.length === 0) {
+                alert('⚠️ Falhou em capturar dados.');
+                btn.innerText = '❌ Falhou';
+                btn.disabled = false;
+                return;
+            }
+
+            let planilhaDados = [cabecalhoArray, ...todasLinhas];
+            let ws = XLSX.utils.aoa_to_sheet(planilhaDados);
+
+            // Gerar CSV
+            let csv = XLSX.utils.sheet_to_csv(ws);
+
+            // Baixar arquivo
+            let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "tabela_completa.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log(`✅ Download CSV concluído com ${todasLinhas.length} registros.`);
+            btn.innerText = '✅ Download CSV';
+        } catch (e) {
+            console.error(e);
+            alert('❌ Erro durante o download');
+            btn.innerText = '❌ Erro';
+            btn.disabled = false;
+        }
+    };
+})();
+
+    </textarea>
+
+  <script>
+
+
+function copiarCodigo(tipo) {
+  let codigo = '';
+  if (tipo === 'xlsx') codigo = document.getElementById('codigoXLSX').value;
+  else if (tipo === 'csv') codigo = document.getElementById('codigoCsv').value;
+  else if (tipo === 'antena') codigo = document.getElementById('codigoAntena').value;
+
+  navigator.clipboard.writeText(codigo).then(() => {
+    alert("✅ Código copiado com sucesso!");
+  }).catch(err => {
+    alert("❌ Erro ao copiar: " + err);
+  });
+}
+
   </script>
 
 </body>
